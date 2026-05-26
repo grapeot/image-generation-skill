@@ -1,0 +1,35 @@
+[project]
+name = "image-generation-skill"
+version = "0.1.0"
+description = "Public-safe AI image generation and upscaling skill for Gemini and OpenAI image models"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=1.73.1,<2",
+    "openai>=1.60,<3",
+    "python-dotenv>=1.0,<2",
+]
+
+[project.scripts]
+generate-image = "image_generation_skill.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "live_integration: tests that call real Gemini or OpenAI image APIs",
+]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+image_generation_skill = ["py.typed"]

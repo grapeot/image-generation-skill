@@ -1,0 +1,17 @@
+{
+  "include": ["src", "tests"],
+  "exclude": [
+    ".venv",
+    "**/.venv",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/.ruff_cache",
+    "build",
+    "dist",
+    "**/*.egg-info"
+  ],
+  "extraPaths": ["src"],
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.11"
+}

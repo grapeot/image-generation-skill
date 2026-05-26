@@ -1,0 +1,48 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Generated images and output artifacts
+output/
+outputs/
+generated/
+generated_images/
+artifacts/
+*.generated.jpg
+*.generated.jpeg
+*.generated.png
+*_generated.jpg
+*_generated.jpeg
+*_generated.png
+
+# Logs and local data
+logs/
+*.log
+data/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
