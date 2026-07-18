@@ -98,6 +98,15 @@ Never write credentials into prompts, command history summaries, docs, tests, or
 
 Generated images, logs, and local data belong in ignored directories such as `output/`, `generated/`, `logs/`, or `data/`.
 
+## Known Caveats
+
+These pitfalls were observed in real agent workflows and are worth checking before invoking `gpt-image-2` or local chart libraries.
+
+- **GPT-Image-2 timeout**: the default bash timeout (commonly 120s) is too short for `gpt-image-2`. Complex image edits such as redrawing a matplotlib chart into an infographic routinely need 300s or more. Set an explicit timeout (for example `timeout=300000`, roughly 5 minutes). Without an explicit timeout, the command produces no output and exits on timeout.
+- **Parallel multi-image generation**: `gpt-image-2` has high per-call latency. When producing a set of hero images, covers, or variants, do not run them serially. Use Python `ThreadPoolExecutor` or shell concurrency to launch multiple `generate-image --model gpt-image-2 --quality low` jobs at once. An empirical sweet spot is 4-6 concurrent jobs with a per-task timeout around 420s. Write all outputs into an ignored/temp directory and verify every output path exists after the batch finishes.
+- **matplotlib CJK rendering**: on macOS, matplotlib cannot render Chinese with Arial. Use `matplotlib.font_manager` to locate a system CJK font (`STHeiti`, `Heiti SC`, `PingFang HK`) and pass it via `FontProperties(fname=...)` per text element. Do not put font names directly into `rcParams['font.sans-serif']`; `font_manager.findfont()` is unreliable for CJK fonts on macOS.
+- **gpt-image-2 is repaint-only, not fresh generation**: when building infographics with `gpt-image-2`, first produce a matplotlib structure draft and pass it as the `-i` input image. `gpt-image-2` understands the draft layout, preserves title and annotation text, and improves the visual presentation. Asking `gpt-image-2` to generate an infographic from a text prompt alone (no input image) produces unreliable results. `--aspect-ratio 16:9` suits horizontal infographics.
+
 ## Acceptance Criteria
 
 A local installation is ready when `generate-image --help` renders successfully, `python -m pytest -v` passes offline, `.env` is local and ignored by git, and the workspace exposes only this root skill file for image generation discovery.
