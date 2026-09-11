@@ -2,6 +2,15 @@
 
 ## Changelog
 
+### 2026-09-11
+
+- Added GPT Image 2.5 model aliases: `gpt-image-2.5-sunburst` (precision-first) and `gpt-image-2.5-flare` (speed-first), both at the same price as `gpt-image-2`, which remains supported.
+- Extended `--quality` to `low|medium|high|xhigh|max|auto` (GPT Image 2.5 adds `xhigh`, `max`, and `auto`); parser default stays `medium`.
+- Removed the OpenAI single-input limit: every repeatable `-i` input is now passed to one `images.edit` call, matching GPT Image 2.5's native multi-reference support. The `edit` protocol type now accepts a sequence of binary streams.
+- `--upscale` now rejects any `gpt-image*` model instead of only `gpt-image-2`.
+- Updated `skills/skill_image_generation.md`, `README.md`, `.env.example`, `docs/prd.md`, `docs/rfc.md`, and `docs/test.md`.
+- Added offline tests for the 2.5 aliases, the extended quality tiers, `--upscale` rejection, and multi-input editing through an injected fake OpenAI client. Verified `.venv/bin/python -m pytest -q` — 27 passed.
+
 ### 2026-05-25
 
 - Replaced broad pyright diagnostic suppression with targeted provider protocols, typed argparse coercion, public test-facing helper aliases, and pyright/basedpyright excludes for `.venv`, caches, and build artifacts.

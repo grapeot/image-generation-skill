@@ -75,13 +75,14 @@ Optional model overrides are listed in `.env.example`. Generic 1Password referen
 ```bash
 generate-image -p "A serene mountain lake" -o lake.jpg
 generate-image -p "A cinematic mountain lake" -o lake.jpg -m gemini-pro
-generate-image -p "A product photo" -o product.png -m gpt-image-2 --quality medium
+generate-image -p "A product photo" -o product.png -m gpt-image-2.5-sunburst --quality high
 generate-image -p "Remove the background" -i photo.jpg -o clean.png
+generate-image -p "Merge these references" -i logo.png -i qr.png -o closing.png -m gpt-image-2.5-flare
 generate-image -p "Wide banner" -o banner.jpg --size 4K --aspect-ratio 16:9
 generate-image --upscale -i small.jpg -o big.jpg
 ```
 
-Supported model aliases are `gemini-flash`, `gemini-pro`, and `gpt-image-2`. Exact model IDs currently accepted by the CLI are `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and `gpt-image-2`.
+Supported model aliases are `gemini-flash`, `gemini-pro`, `gpt-image-2`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare`. Exact model IDs currently accepted by the CLI are `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, `gpt-image-2`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare`. OpenAI image editing accepts multiple repeatable `-i` inputs.
 
 OpenAI size aliases map to concrete pixel sizes. For example, `1K + 16:9` maps to `1536x864`, and `4K + 16:9` maps to `3840x2160`.
 

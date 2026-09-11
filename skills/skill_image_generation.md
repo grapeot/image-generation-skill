@@ -50,11 +50,15 @@ Gemini Pro:
 generate-image -p "A cinematic mountain lake" -o output/lake.jpg --model gemini-pro
 ```
 
-OpenAI image generation:
+OpenAI image generation (GPT Image 2.5):
 
 ```bash
-generate-image -p "A clean product photo on a white background" -o output/product.png --model gpt-image-2 --quality medium
+generate-image -p "A clean product photo on a white background" -o output/product.png --model gpt-image-2.5-sunburst --quality high
 ```
+
+GPT Image 2.5 ships as two variants at the same price: `gpt-image-2.5-sunburst` (precision-first, for final assets) and `gpt-image-2.5-flare` (speed-first, for fast drafts). `gpt-image-2` remains available.
+
+Final delivery format rule for external Markdown deliverables: every embedded image in a survey report, blog draft, course material, or share-ready document must be a PNG, JPG, or WebP file produced by a GPT Image model (`gpt-image-2.5-sunburst` / `gpt-image-2.5-flare` / `gpt-image-2`) generation/redraw, or a compressed derivative of that output. SVG, Mermaid, matplotlib, Pillow, HTML/CSS screenshots, Graphviz, draw.io exports, Keynote/PowerPoint exports, and other local/generated visuals are allowed only as intermediate editable sources or structure drafts. They must not be embedded directly, even if converted to PNG/JPG/WebP locally. Local conversion or compression does not satisfy the final-delivery rule unless the visual has passed through a GPT Image model. SVG rendering differs across Markdown renderers, mobile clients, publishing pipelines, security policies, fonts, sizing, and dark-mode inheritance.
 
 Image editing with prompt and one input:
 
@@ -62,10 +66,11 @@ Image editing with prompt and one input:
 generate-image -p "Remove the background and keep the subject natural" -i input/photo.jpg -o output/clean.png
 ```
 
-Gemini image editing with multiple inputs:
+Image editing with multiple inputs (`-i` is repeatable; Gemini and GPT Image 2.5 both accept several inputs):
 
 ```bash
 generate-image -p "Combine the first image composition with the second image color palette" -i input/layout.jpg -i input/style.jpg -o output/combined.jpg
+generate-image -p "Merge the logo and the QR code into one closing card" -i input/logo.png -i input/qr.png -o output/closing.png --model gpt-image-2.5-sunburst
 ```
 
 4K generation with aspect ratio:
@@ -82,13 +87,13 @@ generate-image --upscale -i input/small.jpg -o output/small_4k.jpg --aspect-rati
 
 ## Model And Size Controls
 
-Supported model aliases are `gemini-flash`, `gemini-pro`, and `gpt-image-2`. Exact accepted IDs are `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and `gpt-image-2`.
+Supported model aliases are `gemini-flash`, `gemini-pro`, `gpt-image-2`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare`. Exact accepted IDs are `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, `gpt-image-2`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare`.
 
 Environment variables can override model IDs: `IMAGE_GENERATION_MODEL`, `GEMINI_FLASH_IMAGE_MODEL`, `GEMINI_IMAGE_GENERATION_MODEL`, `GEMINI_PRO_IMAGE_MODEL`, `OPENAI_IMAGE_MODEL`, `GEMINI_IMAGE_UPSCALE_MODEL`, and `IMAGE_UPSCALE_MODEL`.
 
 OpenAI size mappings are deterministic. Examples: `1K + 1:1` maps to `1024x1024`, `1K + 16:9` maps to `1536x864`, and `4K + 16:9` maps to `3840x2160`.
 
-`--quality low|medium|high` applies to `gpt-image-2`. Gemini accepts the flag but ignores it because quality tiers are provider-specific.
+`--quality low|medium|high|xhigh|max|auto` applies to GPT Image models. GPT Image 2.5 adds `xhigh`, `max`, and `auto`, and its quality scale is finer than GPT Image 2's: 2.5 `high` costs about a quarter of GPT Image 2 `high`, and 2.5 `max` matches the old `high`. Gemini accepts the flag but ignores it because quality tiers are provider-specific.
 
 ## Agent Safety Rules
 
@@ -100,12 +105,12 @@ Generated images, logs, and local data belong in ignored directories such as `ou
 
 ## Known Caveats
 
-These pitfalls were observed in real agent workflows and are worth checking before invoking `gpt-image-2` or local chart libraries.
+These pitfalls were observed in real agent workflows and are worth checking before invoking GPT Image 2.5 or local chart libraries.
 
-- **GPT-Image-2 timeout**: the default bash timeout (commonly 120s) is too short for `gpt-image-2`. Complex image edits such as redrawing a matplotlib chart into an infographic routinely need 300s or more. Set an explicit timeout (for example `timeout=300000`, roughly 5 minutes). Without an explicit timeout, the command produces no output and exits on timeout.
-- **Parallel multi-image generation**: `gpt-image-2` has high per-call latency. When producing a set of hero images, covers, or variants, do not run them serially. Use Python `ThreadPoolExecutor` or shell concurrency to launch multiple `generate-image --model gpt-image-2 --quality low` jobs at once. An empirical sweet spot is 4-6 concurrent jobs with a per-task timeout around 420s. Write all outputs into an ignored/temp directory and verify every output path exists after the batch finishes.
+- **GPT Image timeout**: the default bash timeout (commonly 120s) is too short for GPT Image 2.5. Complex image edits such as redrawing a matplotlib chart into an infographic routinely need 300s or more. Set an explicit timeout (for example `timeout=300000`, roughly 5 minutes). Without an explicit timeout, the command produces no output and exits on timeout.
+- **Parallel multi-image generation**: GPT Image 2.5 has high per-call latency. When producing a set of hero images, covers, or variants, do not run them serially. Use Python `ThreadPoolExecutor` or shell concurrency to launch multiple `generate-image --model gpt-image-2.5-flare --quality low` jobs at once. An empirical sweet spot is 4-6 concurrent jobs with a per-task timeout around 420s. Write all outputs into an ignored/temp directory and verify every output path exists after the batch finishes.
 - **matplotlib CJK rendering**: on macOS, matplotlib cannot render Chinese with Arial. Use `matplotlib.font_manager` to locate a system CJK font (`STHeiti`, `Heiti SC`, `PingFang HK`) and pass it via `FontProperties(fname=...)` per text element. Do not put font names directly into `rcParams['font.sans-serif']`; `font_manager.findfont()` is unreliable for CJK fonts on macOS.
-- **gpt-image-2 is repaint-only, not fresh generation**: when building infographics with `gpt-image-2`, first produce a matplotlib structure draft and pass it as the `-i` input image. `gpt-image-2` understands the draft layout, preserves title and annotation text, and improves the visual presentation. Asking `gpt-image-2` to generate an infographic from a text prompt alone (no input image) produces unreliable results. `--aspect-ratio 16:9` suits horizontal infographics.
+- **GPT Image is repaint-only, not fresh generation**: when building infographics with GPT Image 2.5, first produce a matplotlib structure draft and pass it as the `-i` input image. The model understands the draft layout, preserves title and annotation text, and improves the visual presentation. Asking it to generate an infographic from a text prompt alone (no input image) produces unreliable results. `--aspect-ratio 16:9` suits horizontal infographics.
 
 ## Acceptance Criteria
 

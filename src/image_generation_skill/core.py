@@ -23,6 +23,8 @@ MODEL_ALIASES = {
     "gemini-pro": "gemini-3-pro-image-preview",
     "gemini-3-pro-image-preview": "gemini-3-pro-image-preview",
     "gpt-image-2": "gpt-image-2",
+    "gpt-image-2.5-flare": "gpt-image-2.5-flare",
+    "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
 }
 
 OPENAI_IMAGE_SIZE_MAP = {
@@ -147,7 +149,7 @@ class OpenAIImagesLike(Protocol):
         self,
         *,
         model: str,
-        image: BinaryIO,
+        image: Sequence[BinaryIO] | BinaryIO,
         prompt: str,
         quality: str,
         output_format: str,
@@ -297,8 +299,8 @@ def _resolve_generate_model(requested_model: str | None) -> tuple[str, str]:
 def _resolve_upscale_model(requested_model: str | None) -> tuple[str, str]:
     effective_choice = requested_model or os.environ.get("IMAGE_UPSCALE_MODEL", "gemini-pro")
     normalized = _normalize_model_choice(effective_choice)
-    if normalized == "gpt-image-2":
-        raise ValueError("--upscale is not supported with gpt-image-2")
+    if normalized.startswith("gpt-image"):
+        raise ValueError(f"--upscale is not supported with {normalized}")
     if normalized == "gemini-3.1-flash-image-preview":
         return (
             "gemini",
@@ -494,17 +496,19 @@ def _generate_openai(
 
     if image_paths:
         _require_existing_files(image_paths)
-        if len(image_paths) != 1:
-            raise ValueError("gpt-image-2 currently supports at most one --input image in this CLI.")
-        with Path(image_paths[0]).expanduser().open("rb") as image_file:
+        image_files = [Path(image_path).expanduser().open("rb") for image_path in image_paths]
+        try:
             result = client.images.edit(
                 model=model,
-                image=image_file,
+                image=image_files,
                 prompt=prompt,
                 quality=quality,
                 output_format="png",
                 extra_body={"size": size},
             )
+        finally:
+            for image_file in image_files:
+                image_file.close()
     else:
         result = client.images.generate(
             model=model,
@@ -541,7 +545,7 @@ def generate(
         if quality != "high":
             print(
                 f"Note: --quality {quality} is ignored for Gemini models "
-                + "because only gpt-image-2 supports quality tiers."
+                + "because only GPT Image models support quality tiers."
             )
         return _generate_gemini(
             model=model_id,
@@ -619,7 +623,8 @@ def build_parser() -> argparse.ArgumentParser:
 examples:
   generate-image -p "A serene mountain lake" -o lake.jpg
   generate-image -p "A cinematic mountain lake" -o lake.jpg -m gemini-pro
-  generate-image -p "A product photo on a white background" -o product.png -m gpt-image-2
+  generate-image -p "A product photo on a white background" -o product.png -m gpt-image-2.5-sunburst
+  generate-image -p "Combine these references" -i a.png -i b.png -o combined.png -m gpt-image-2.5-flare
   generate-image -p "Remove the background" -i photo.jpg -o clean.png
   generate-image -p "Wide banner" -o banner.jpg --size 4K --aspect-ratio 16:9
   generate-image --upscale -i small.jpg -o big.jpg
@@ -645,6 +650,7 @@ examples:
         "-m",
         help=(
             "Model alias or exact id: gemini-flash, gemini-pro, gpt-image-2, "
+            "gpt-image-2.5-flare, gpt-image-2.5-sunburst, "
             "gemini-3.1-flash-image-preview, gemini-3-pro-image-preview"
         ),
     )
@@ -652,9 +658,12 @@ examples:
     _ = parser.add_argument(
         "--quality",
         "-q",
-        default="high",
-        choices=["low", "medium", "high"],
-        help="Quality tier for gpt-image-2; ignored for Gemini models",
+        default="medium",
+        choices=["low", "medium", "high", "xhigh", "max", "auto"],
+        help=(
+            "Quality tier for GPT Image models (gpt-image-2.5 adds xhigh/max/auto); "
+            "ignored for Gemini"
+        ),
     )
     return parser
 

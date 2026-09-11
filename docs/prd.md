@@ -12,7 +12,7 @@ The secondary user is a developer who wants to vendor the skill into another wor
 
 ## Goals
 
-The repo must provide a stable `generate-image` command, importable Python functions, offline tests, public-safe docs, and one root skill file. It must support Gemini Flash, Gemini Pro, GPT-Image-2, Gemini image editing, and Gemini upscaling.
+The repo must provide a stable `generate-image` command, importable Python functions, offline tests, public-safe docs, and one root skill file. It must support Gemini Flash, Gemini Pro, GPT-Image-2, GPT-Image-2.5 (Sunburst and Flare), Gemini image editing, OpenAI image editing with multiple reference images, and Gemini upscaling.
 
 The public repo must be safe to publish. Examples use fake credentials, generic 1Password references, and no local absolute paths. Live API behavior must be opt-in through real local configuration.
 
