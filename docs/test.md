@@ -2,7 +2,7 @@
 
 ## Scope
 
-The default suite verifies local contracts that can run without external services: CLI parsing, model alias resolution, environment override behavior, OpenAI size mapping, output path construction, argument validation, and missing API key handling.
+The default suite verifies local contracts that can run without external services: CLI parsing, model alias resolution (including the GPT Image 2.5 Sunburst/Flare aliases), environment override behavior, the extended quality tiers (`low|medium|high|xhigh|max|auto`), OpenAI size mapping, output path construction, argument validation, missing API key handling, and OpenAI multi-input editing through an injected fake client.
 
 ## Offline Tests
 

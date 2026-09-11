@@ -5,8 +5,8 @@ import importlib
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from types import ModuleType
-from typing import NoReturn, Protocol, cast
+from types import ModuleType, SimpleNamespace
+from typing import Any, NoReturn, Protocol, cast
 
 import pytest
 
@@ -42,6 +42,17 @@ class CoreModule(Protocol):
     def coerce_cli_args(self, args: argparse.Namespace) -> ParsedCliArgs: ...
 
     def validate_args(self, parser: argparse.ArgumentParser, args: argparse.Namespace) -> ParsedCliArgs: ...
+
+    def generate(
+        self,
+        prompt: str,
+        image_paths: list[str] | None = None,
+        output_prefix: str = "output",
+        image_size: str = "1K",
+        aspect_ratio: str | None = None,
+        model: str | None = None,
+        quality: str = "high",
+    ) -> str | None: ...
 
 
 class CliModule(Protocol):
@@ -220,3 +231,78 @@ def test_cli_returns_nonzero_for_library_error(monkeypatch: pytest.MonkeyPatch, 
 
     assert exit_code == 1
     assert "missing fake key" in capsys.readouterr().err
+
+
+def test_resolve_generate_model_supports_gpt_image_2_5_variants(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+
+    for alias in ("gpt-image-2.5-flare", "gpt-image-2.5-sunburst"):
+        provider, model_id = core.resolve_generate_model(alias)
+
+        assert provider == "openai"
+        assert model_id == alias
+
+
+def test_validate_args_rejects_upscale_with_gpt_image_2_5() -> None:
+    parser = _build_parser()
+    args = parser.parse_args(["--upscale", "-i", "input.jpg", "-m", "gpt-image-2.5-sunburst"])
+
+    with pytest.raises(SystemExit):
+        _ = core.validate_args(parser, args)
+
+
+def test_parser_accepts_2_5_quality_tiers() -> None:
+    parser = _build_parser()
+
+    for tier in ("low", "medium", "high", "xhigh", "max", "auto"):
+        assert parser.parse_args(["-p", "a cat", "--quality", tier]).quality == tier
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["-p", "a cat", "--quality", "ultra"])
+
+
+def test_generate_openai_accepts_multiple_input_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first = tmp_path / "a.png"
+    second = tmp_path / "b.png"
+    first.write_bytes(b"a")
+    second.write_bytes(b"b")
+    captured: dict[str, Any] = {}
+
+    class FakeImages:
+        def edit(
+            self,
+            *,
+            model: str,
+            image: list[Any],
+            prompt: str,
+            quality: str,
+            output_format: str,
+            extra_body: dict[str, str],
+        ) -> Any:
+            captured["model"] = model
+            captured["image"] = image
+            return SimpleNamespace(data=[])
+
+        def generate(self, **kwargs: object) -> Any:
+            return SimpleNamespace(data=[])
+
+    class FakeClient:
+        def __init__(self) -> None:
+            self.images = FakeImages()
+
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+    monkeypatch.setattr(core, "_get_openai_api_key", lambda: "fake-key")
+    monkeypatch.setattr(core, "_import_openai_sdk", lambda: (lambda *, api_key: FakeClient()))
+
+    result = core.generate(
+        prompt="combine the references",
+        image_paths=[str(first), str(second)],
+        output_prefix=str(tmp_path / "out"),
+        model="gpt-image-2.5-sunburst",
+    )
+
+    assert result is None
+    assert captured["model"] == "gpt-image-2.5-sunburst"
+    assert len(captured["image"]) == 2
