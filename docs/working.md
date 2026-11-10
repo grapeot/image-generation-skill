@@ -4,10 +4,11 @@
 
 ### 2026-11-10
 
+- Verified against the live API with zero-cost invalid requests: `gpt-image-2.6-*` accepts quality `low|medium|high|auto` only (400 on `xhigh`/`max`), validates custom sizes with the same rules as 2.5, and accepts `complexity` `low|medium|high`. The OpenAI path now raises a clear error for `xhigh`/`max` on 2.6 before calling the API.
 - Added GPT Image 2.6 model aliases `gpt-image-2.6-sunburst` and `gpt-image-2.6-flare` (released 2026-11-04, same per-token price as 2.5, about 50% faster per OpenAI). 2.6 is now the recommended OpenAI generation in docs and examples; the 2.5 aliases and `gpt-image-2` stay supported, and 2.5 remains the choice for Batch API jobs or dated snapshot pins.
 - Added `--complexity low|medium|high` (short `-c`). It is forwarded as the `complexity` request field only for `gpt-image-2.6*` models; other models get a note and the field is omitted. Without the flag the provider default (`high`) applies.
 - `.env.example` now suggests `OPENAI_IMAGE_MODEL=gpt-image-2.6-sunburst`.
-- Documented the open doc conflict on `xhigh`/`max` for 2.6 (guide lists them, API reference attaches them to 2.5 only) and the forum report of higher low/medium token use on 2.6.
+- Documented the forum report of higher low/medium token use on 2.6.
 - Added offline tests for the 2.6 aliases, complexity parsing, and complexity forwarding on generate and edit paths.
 
 ### 2026-09-11

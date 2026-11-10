@@ -24,7 +24,7 @@ Gemini credentials resolve from `GEMINI_API_KEY`, then `GOOGLE_API_KEY`, then op
 
 OpenAI editing passes every repeatable `-i` input to a single `images.edit` call. GPT Image 2.5 and 2.6 accept multiple reference images natively, so the CLI imposes no single-input limit.
 
-`--complexity low|medium|high` is forwarded as the `complexity` request field only for `gpt-image-2.6*` models; for other models the CLI prints a note and omits it. When the flag is absent the field is omitted and the provider default (`high`) applies.
+`--complexity low|medium|high` is forwarded as the `complexity` request field only for `gpt-image-2.6*` models; for other models the CLI prints a note and omits it. When the flag is absent the field is omitted and the provider default (`high`) applies. GPT Image 2.6 rejects quality `xhigh` and `max`, so the OpenAI path raises `ValueError` for those tiers on `gpt-image-2.6*` before any request.
 
 OpenAI uses deterministic size mapping because the provider expects concrete pixel sizes. Gemini receives `image_size` and optional `aspect_ratio` through `types.ImageConfig`, which requires modern `google-genai` versions.
 

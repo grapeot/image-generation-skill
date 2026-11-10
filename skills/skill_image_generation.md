@@ -99,7 +99,7 @@ Environment variables can override model IDs: `IMAGE_GENERATION_MODEL`, `GEMINI_
 
 OpenAI size mappings are deterministic. Examples: `1K + 1:1` maps to `1024x1024`, `1K + 16:9` maps to `1536x864`, and `4K + 16:9` maps to `3840x2160`.
 
-`--quality low|medium|high|xhigh|max|auto` applies to GPT Image models. GPT Image 2.5 adds `xhigh`, `max`, and `auto`, and its quality scale is finer than GPT Image 2's: 2.5 `high` costs about a quarter of GPT Image 2 `high`, and 2.5 `max` matches the old `high`. OpenAI's image guide lists the same `low` through `max` tiers for 2.6, while the API reference still attaches `xhigh` and `max` to 2.5 only; if a 2.6 request rejects `xhigh` or `max`, fall back to `high`. One forum sample measured more output tokens for 2.6 than 2.5 at `low`/`medium`, so check cost on large batches. Gemini accepts the flag but ignores it because quality tiers are provider-specific.
+`--quality low|medium|high|xhigh|max|auto` applies to GPT Image models. GPT Image 2.5 adds `xhigh`, `max`, and `auto`, and its quality scale is finer than GPT Image 2's: 2.5 `high` costs about a quarter of GPT Image 2 `high`, and 2.5 `max` matches the old `high`. GPT Image 2.6 accepts only `low`, `medium`, `high`, and `auto` (the API returns 400 for `xhigh`/`max`, verified 2026-11-10 despite the image guide listing them), so the CLI rejects those two tiers for `gpt-image-2.6*`; use `gpt-image-2.5-sunburst` when you need `xhigh` or `max`. Custom `WIDTHxHEIGHT` sizes follow the same rules on 2.6 as on 2.5 (multiples of 16, longest edge ≤ 3840). One forum sample measured more output tokens for 2.6 than 2.5 at `low`/`medium`, so check cost on large batches. Gemini accepts the flag but ignores it because quality tiers are provider-specific.
 
 ## Agent Safety Rules
 
