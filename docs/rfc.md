@@ -20,9 +20,11 @@ Gemini credentials resolve from `GEMINI_API_KEY`, then `GOOGLE_API_KEY`, then op
 
 ## Provider Routing
 
-`gemini-flash` maps to `gemini-3.1-flash-image-preview`. `gemini-pro` maps to `gemini-3-pro-image-preview`. `gpt-image-2`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5-flare` map to OpenAI (Sunburst is precision-first, Flare is speed-first). Environment variables can override the concrete model IDs while the CLI keeps a small set of accepted public aliases.
+`gemini-flash` maps to `gemini-3.1-flash-image-preview`. `gemini-pro` maps to `gemini-3-pro-image-preview`. `gpt-image-2`, `gpt-image-2.5-sunburst`, `gpt-image-2.5-flare`, `gpt-image-2.6-sunburst`, and `gpt-image-2.6-flare` map to OpenAI (Sunburst is precision-first, Flare is speed-first). Environment variables can override the concrete model IDs while the CLI keeps a small set of accepted public aliases.
 
-OpenAI editing passes every repeatable `-i` input to a single `images.edit` call. GPT Image 2.5 accepts multiple reference images natively, so the CLI imposes no single-input limit.
+OpenAI editing passes every repeatable `-i` input to a single `images.edit` call. GPT Image 2.5 and 2.6 accept multiple reference images natively, so the CLI imposes no single-input limit.
+
+`--complexity low|medium|high` is forwarded as the `complexity` request field only for `gpt-image-2.6*` models; for other models the CLI prints a note and omits it. When the flag is absent the field is omitted and the provider default (`high`) applies.
 
 OpenAI uses deterministic size mapping because the provider expects concrete pixel sizes. Gemini receives `image_size` and optional `aspect_ratio` through `types.ImageConfig`, which requires modern `google-genai` versions.
 
@@ -36,4 +38,4 @@ The repo can be published as-is because public files use placeholders and generi
 
 ## Testing Strategy
 
-Default tests cover parser behavior, model resolution (including the GPT Image 2.5 aliases and the extended quality tiers), OpenAI size mapping, output path construction, argument validation, missing key exceptions, OpenAI multi-input editing through a fake client, and CLI nonzero behavior. These tests do not import Gemini or OpenAI SDKs for network work and do not call provider APIs.
+Default tests cover parser behavior, model resolution (including the GPT Image 2.5 and 2.6 aliases and the extended quality tiers), complexity forwarding,, OpenAI size mapping, output path construction, argument validation, missing key exceptions, OpenAI multi-input editing through a fake client, and CLI nonzero behavior. These tests do not import Gemini or OpenAI SDKs for network work and do not call provider APIs.

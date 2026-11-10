@@ -52,6 +52,7 @@ class CoreModule(Protocol):
         aspect_ratio: str | None = None,
         model: str | None = None,
         quality: str = "high",
+        complexity: str | None = None,
     ) -> str | None: ...
 
 
@@ -306,3 +307,92 @@ def test_generate_openai_accepts_multiple_input_images(
     assert result is None
     assert captured["model"] == "gpt-image-2.5-sunburst"
     assert len(captured["image"]) == 2
+
+
+def test_resolve_generate_model_supports_gpt_image_2_6_variants(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+
+    for alias in ("gpt-image-2.6-flare", "gpt-image-2.6-sunburst"):
+        provider, model_id = core.resolve_generate_model(alias)
+
+        assert provider == "openai"
+        assert model_id == alias
+
+
+def test_parser_accepts_complexity_levels() -> None:
+    parser = _build_parser()
+
+    assert parser.parse_args(["-p", "a cat"]).complexity is None
+    for level in ("low", "medium", "high"):
+        assert parser.parse_args(["-p", "a cat", "--complexity", level]).complexity == level
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["-p", "a cat", "--complexity", "max"])
+
+
+def _run_fake_openai_generate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    model: str,
+    complexity: str | None,
+    image_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    captured: dict[str, Any] = {}
+
+    class FakeImages:
+        def edit(self, **kwargs: Any) -> Any:
+            captured.update(kwargs)
+            return SimpleNamespace(data=[])
+
+        def generate(self, **kwargs: Any) -> Any:
+            captured.update(kwargs)
+            return SimpleNamespace(data=[])
+
+    class FakeClient:
+        def __init__(self) -> None:
+            self.images = FakeImages()
+
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+    monkeypatch.setattr(core, "_get_openai_api_key", lambda: "fake-key")
+    monkeypatch.setattr(core, "_import_openai_sdk", lambda: (lambda *, api_key: FakeClient()))
+
+    _ = core.generate(
+        prompt="change the sign",
+        image_paths=image_paths,
+        output_prefix=str(tmp_path / "out"),
+        model=model,
+        complexity=complexity,
+    )
+    return captured
+
+
+def test_generate_forwards_complexity_to_gpt_image_2_6(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "shop.png"
+    source.write_bytes(b"x")
+
+    generated = _run_fake_openai_generate(
+        tmp_path, monkeypatch, model="gpt-image-2.6-flare", complexity="medium"
+    )
+    edited = _run_fake_openai_generate(
+        tmp_path, monkeypatch, model="gpt-image-2.6-sunburst", complexity="low", image_paths=[str(source)]
+    )
+
+    assert generated["model"] == "gpt-image-2.6-flare"
+    assert generated["extra_body"]["complexity"] == "medium"
+    assert edited["model"] == "gpt-image-2.6-sunburst"
+    assert edited["extra_body"]["complexity"] == "low"
+
+
+def test_generate_omits_complexity_when_unset_or_unsupported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    unset = _run_fake_openai_generate(tmp_path, monkeypatch, model="gpt-image-2.6-sunburst", complexity=None)
+    unsupported = _run_fake_openai_generate(
+        tmp_path, monkeypatch, model="gpt-image-2.5-sunburst", complexity="low"
+    )
+
+    assert "complexity" not in unset["extra_body"]
+    assert "complexity" not in unsupported["extra_body"]

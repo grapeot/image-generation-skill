@@ -31,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
                 aspect_ratio=args.aspect_ratio,
                 model=args.model,
                 quality=args.quality,
+                complexity=args.complexity,
             )
     except (FileNotFoundError, ImageGenerationError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
