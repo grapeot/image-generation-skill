@@ -25,7 +25,11 @@ MODEL_ALIASES = {
     "gpt-image-2": "gpt-image-2",
     "gpt-image-2.5-flare": "gpt-image-2.5-flare",
     "gpt-image-2.5-sunburst": "gpt-image-2.5-sunburst",
+    "gpt-image-2.6-flare": "gpt-image-2.6-flare",
+    "gpt-image-2.6-sunburst": "gpt-image-2.6-sunburst",
 }
+
+COMPLEXITY_MODEL_PREFIX = "gpt-image-2.6"
 
 OPENAI_IMAGE_SIZE_MAP = {
     "1K": {
@@ -206,6 +210,7 @@ class CliArgs:
     model: str | None
     upscale: bool
     quality: str
+    complexity: str | None
 
 
 def load_env_file_if_present() -> None:
@@ -488,11 +493,19 @@ def _generate_openai(
     image_size: str = "1K",
     aspect_ratio: str | None = None,
     quality: str = "high",
+    complexity: str | None = None,
 ) -> str | None:
     openai_client = _import_openai_sdk()
     client = openai_client(api_key=_get_openai_api_key())
     size = _map_size_for_openai(image_size, aspect_ratio)
-    print(f"Model: {model} | Size: {size} | Quality: {quality}")
+    extra_body = {"size": size}
+    if complexity is not None:
+        if model.startswith(COMPLEXITY_MODEL_PREFIX):
+            extra_body["complexity"] = complexity
+        else:
+            print(f"Note: --complexity {complexity} is ignored for {model} because only GPT Image 2.6 supports it.")
+    complexity_label = extra_body.get("complexity", "provider default")
+    print(f"Model: {model} | Size: {size} | Quality: {quality} | Complexity: {complexity_label}")
 
     if image_paths:
         _require_existing_files(image_paths)
@@ -504,7 +517,7 @@ def _generate_openai(
                 prompt=prompt,
                 quality=quality,
                 output_format="png",
-                extra_body={"size": size},
+                extra_body=extra_body,
             )
         finally:
             for image_file in image_files:
@@ -515,7 +528,7 @@ def _generate_openai(
             prompt=prompt,
             quality=quality,
             output_format="png",
-            extra_body={"size": size},
+            extra_body=extra_body,
         )
 
     first_saved: str | None = None
@@ -538,6 +551,7 @@ def generate(
     aspect_ratio: str | None = None,
     model: str | None = None,
     quality: str = "high",
+    complexity: str | None = None,
 ) -> str | None:
     load_env_file_if_present()
     provider, model_id = _resolve_generate_model(model)
@@ -563,6 +577,7 @@ def generate(
         image_size=image_size,
         aspect_ratio=aspect_ratio,
         quality=quality,
+        complexity=complexity,
     )
 
 
@@ -623,8 +638,9 @@ def build_parser() -> argparse.ArgumentParser:
 examples:
   generate-image -p "A serene mountain lake" -o lake.jpg
   generate-image -p "A cinematic mountain lake" -o lake.jpg -m gemini-pro
-  generate-image -p "A product photo on a white background" -o product.png -m gpt-image-2.5-sunburst
-  generate-image -p "Combine these references" -i a.png -i b.png -o combined.png -m gpt-image-2.5-flare
+  generate-image -p "A product photo on a white background" -o product.png -m gpt-image-2.6-sunburst
+  generate-image -p "Combine these references" -i a.png -i b.png -o combined.png -m gpt-image-2.6-flare
+  generate-image -p "Change the sign to OPEN" -i shop.png -o shop_open.png -m gpt-image-2.6-sunburst --complexity low
   generate-image -p "Remove the background" -i photo.jpg -o clean.png
   generate-image -p "Wide banner" -o banner.jpg --size 4K --aspect-ratio 16:9
   generate-image --upscale -i small.jpg -o big.jpg
@@ -635,7 +651,7 @@ examples:
         "--input",
         "-i",
         action="append",
-        help="Input image path, repeatable for Gemini image editing",
+        help="Input image path, repeatable for Gemini and GPT Image editing",
     )
     _ = parser.add_argument("--output", "-o", default="output", help="Output file path or prefix")
     _ = parser.add_argument("--size", "-s", default="1K", choices=["1K", "2K", "4K"], help="Image size")
@@ -651,6 +667,7 @@ examples:
         help=(
             "Model alias or exact id: gemini-flash, gemini-pro, gpt-image-2, "
             "gpt-image-2.5-flare, gpt-image-2.5-sunburst, "
+            "gpt-image-2.6-flare, gpt-image-2.6-sunburst, "
             "gemini-3.1-flash-image-preview, gemini-3-pro-image-preview"
         ),
     )
@@ -661,8 +678,17 @@ examples:
         default="medium",
         choices=["low", "medium", "high", "xhigh", "max", "auto"],
         help=(
-            "Quality tier for GPT Image models (gpt-image-2.5 adds xhigh/max/auto); "
+            "Quality tier for GPT Image models (gpt-image-2.5 and 2.6 add xhigh/max/auto); "
             "ignored for Gemini"
+        ),
+    )
+    _ = parser.add_argument(
+        "--complexity",
+        "-c",
+        choices=["low", "medium", "high"],
+        help=(
+            "Planning effort for GPT Image 2.6, independent of --quality; omitted uses the provider "
+            "default (high). Use low for focused edits. Ignored for other models"
         ),
     )
     return parser
@@ -698,6 +724,7 @@ def coerce_cli_args(args: argparse.Namespace) -> CliArgs:
         model=_optional_str(raw_args.get("model")),
         upscale=_bool_value(raw_args.get("upscale")),
         quality=_required_str(raw_args.get("quality"), "high"),
+        complexity=_optional_str(raw_args.get("complexity")),
     )
 
 
