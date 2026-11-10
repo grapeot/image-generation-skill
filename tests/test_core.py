@@ -396,3 +396,20 @@ def test_generate_omits_complexity_when_unset_or_unsupported(
 
     assert "complexity" not in unset["extra_body"]
     assert "complexity" not in unsupported["extra_body"]
+
+
+def test_generate_rejects_xhigh_and_max_on_gpt_image_2_6(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_IMAGE_MODEL", raising=False)
+    monkeypatch.setattr(core, "_get_openai_api_key", lambda: "fake-key")
+    monkeypatch.setattr(core, "_import_openai_sdk", lambda: (lambda *, api_key: object()))
+
+    for tier in ("xhigh", "max"):
+        with pytest.raises(ValueError, match="not supported"):
+            _ = core.generate(
+                prompt="a cat",
+                output_prefix=str(tmp_path / "out"),
+                model="gpt-image-2.6-sunburst",
+                quality=tier,
+            )

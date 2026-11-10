@@ -30,6 +30,7 @@ MODEL_ALIASES = {
 }
 
 COMPLEXITY_MODEL_PREFIX = "gpt-image-2.6"
+GPT_IMAGE_2_6_UNSUPPORTED_QUALITIES = ("xhigh", "max")
 
 OPENAI_IMAGE_SIZE_MAP = {
     "1K": {
@@ -497,6 +498,11 @@ def _generate_openai(
 ) -> str | None:
     openai_client = _import_openai_sdk()
     client = openai_client(api_key=_get_openai_api_key())
+    if model.startswith(COMPLEXITY_MODEL_PREFIX) and quality in GPT_IMAGE_2_6_UNSUPPORTED_QUALITIES:
+        raise ValueError(
+            f"--quality {quality} is not supported by {model}; use low, medium, high, or auto "
+            + "(xhigh and max exist only on gpt-image-2.5-*)."
+        )
     size = _map_size_for_openai(image_size, aspect_ratio)
     extra_body = {"size": size}
     if complexity is not None:
@@ -678,7 +684,8 @@ examples:
         default="medium",
         choices=["low", "medium", "high", "xhigh", "max", "auto"],
         help=(
-            "Quality tier for GPT Image models (gpt-image-2.5 and 2.6 add xhigh/max/auto); "
+            "Quality tier for GPT Image models; xhigh/max only on gpt-image-2.5, "
+            "gpt-image-2.6 accepts low/medium/high/auto; "
             "ignored for Gemini"
         ),
     )
